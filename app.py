@@ -155,7 +155,12 @@ elif action == "Create/Update User":
     with col1:
         first_name = st.text_input("First Name *", value="")
         last_name = st.text_input("Last Name", value="")
-        birthdate = st.date_input("Birthdate", value=None)
+        birthdate = st.date_input(
+            "Birthdate", 
+            value=None,
+            min_value=datetime(1900, 1, 1),
+            max_value=datetime.now()
+        )
         birthtime = st.time_input("Birth Time (24h)", value=None)
     
     with col2:
