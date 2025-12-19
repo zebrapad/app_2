@@ -47,12 +47,18 @@ def pretty(obj):
     except Exception:
         return str(obj)
 
-def get_headers(require_auth: bool = False):
+def get_headers(require_auth: bool = False, accept_pdf: bool = False):
     """Get HTTP headers with optional authentication."""
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
+    headers = {}
+    if accept_pdf:
+        headers["Accept"] = "application/pdf, application/json"
+    else:
+        headers["Accept"] = "application/json"
+    
+    # Only set Content-Type for non-GET requests
+    if not accept_pdf:
+        headers["Content-Type"] = "application/json"
+    
     if require_auth and token_input:
         headers["Authorization"] = f"Bearer {token_input}"
     return headers
@@ -238,25 +244,42 @@ elif action == "Get Big Three (Sun, Moon, Asc)":
 elif action == "Generate Booklet PDF":
     st.subheader("📖 Generate Booklet PDF")
     user_id = st.number_input("User ID", min_value=1, value=1, step=1)
+    
+    # Check if token is provided
+    if not token_input:
+        st.warning("⚠️ Bearer token is required for PDF generation. Please enter it in the sidebar.")
+    
     if st.button("Generate Booklet"):
-        with st.spinner("Generating booklet PDF... This may take a moment."):
-            resp = make_request("GET", f"{BASE_URL}/users/{user_id}/booklet", headers=get_headers(require_auth=True), timeout=120)
-            if resp and resp.status_code == 200:
-                st.success("✅ Booklet generated successfully!")
-                # Handle PDF download
-                try:
-                    pdf_content = resp.content
-                    filename = f"booklet_{user_id}.pdf"
-                    st.download_button(
-                        label="📥 Download Booklet PDF",
-                        data=pdf_content,
-                        file_name=filename,
-                        mime="application/pdf"
-                    )
-                except Exception as e:
-                    st.info("The PDF has been generated. Check your backend logs for the file location.")
-            elif resp:
-                show_response(resp)
+        if not token_input:
+            st.error("❌ Please enter the bearer token in the sidebar first!")
+        else:
+            with st.spinner("Generating booklet PDF... This may take a moment."):
+                resp = make_request("GET", f"{BASE_URL}/users/{user_id}/booklet", headers=get_headers(require_auth=True, accept_pdf=True), timeout=120)
+                if resp:
+                    if resp.status_code == 200:
+                        st.success("✅ Booklet generated successfully!")
+                        # Handle PDF download
+                        try:
+                            pdf_content = resp.content
+                            filename = f"booklet_{user_id}.pdf"
+                            st.download_button(
+                                label="📥 Download Booklet PDF",
+                                data=pdf_content,
+                                file_name=filename,
+                                mime="application/pdf"
+                            )
+                        except Exception as e:
+                            st.error(f"Error processing PDF: {e}")
+                            st.info("The PDF was generated but couldn't be downloaded. Check your backend logs.")
+                    else:
+                        # Show error response
+                        try:
+                            error_data = resp.json()
+                            st.error(f"❌ Error {resp.status_code}: {error_data.get('detail', 'Unknown error')}")
+                        except:
+                            st.error(f"❌ Error {resp.status_code}: {resp.text[:200]}")
+                else:
+                    st.error("❌ Failed to connect to backend. Check if the backend is running and the URL is correct.")
 
 # ----------------------
 # Generate Calendar PDF
@@ -265,30 +288,47 @@ elif action == "Generate Calendar PDF":
     st.subheader("📅 Generate Calendar PDF")
     user_id = st.number_input("User ID", min_value=1, value=1, step=1)
     year = st.number_input("Year", min_value=2020, max_value=2100, value=2026, step=1)
+    
+    # Check if token is provided
+    if not token_input:
+        st.warning("⚠️ Bearer token is required for PDF generation. Please enter it in the sidebar.")
+    
     if st.button("Generate Calendar"):
-        with st.spinner("Generating calendar PDF... This may take a moment."):
-            resp = make_request(
+        if not token_input:
+            st.error("❌ Please enter the bearer token in the sidebar first!")
+        else:
+            with st.spinner("Generating calendar PDF... This may take a moment."):
+                resp = make_request(
                 "GET", 
                 f"{BASE_URL}/users/{user_id}/calendar?year={year}", 
-                headers=get_headers(require_auth=True), 
+                headers=get_headers(require_auth=True, accept_pdf=True), 
                 timeout=120
             )
-            if resp and resp.status_code == 200:
-                st.success("✅ Calendar generated successfully!")
-                # Handle PDF download
-                try:
-                    pdf_content = resp.content
-                    filename = f"calendar_{user_id}_{year}.pdf"
-                    st.download_button(
-                        label="📥 Download Calendar PDF",
-                        data=pdf_content,
-                        file_name=filename,
-                        mime="application/pdf"
-                    )
-                except Exception as e:
-                    st.info("The PDF has been generated. Check your backend logs for the file location.")
-            elif resp:
-                show_response(resp)
+                if resp:
+                    if resp.status_code == 200:
+                        st.success("✅ Calendar generated successfully!")
+                        # Handle PDF download
+                        try:
+                            pdf_content = resp.content
+                            filename = f"calendar_{user_id}_{year}.pdf"
+                            st.download_button(
+                                label="📥 Download Calendar PDF",
+                                data=pdf_content,
+                                file_name=filename,
+                                mime="application/pdf"
+                            )
+                        except Exception as e:
+                            st.error(f"Error processing PDF: {e}")
+                            st.info("The PDF was generated but couldn't be downloaded. Check your backend logs.")
+                    else:
+                        # Show error response
+                        try:
+                            error_data = resp.json()
+                            st.error(f"❌ Error {resp.status_code}: {error_data.get('detail', 'Unknown error')}")
+                        except:
+                            st.error(f"❌ Error {resp.status_code}: {resp.text[:200]}")
+                else:
+                    st.error("❌ Failed to connect to backend. Check if the backend is running and the URL is correct.")
 
 # ----------------------
 # Footer
