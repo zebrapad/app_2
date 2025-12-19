@@ -240,12 +240,21 @@ elif action == "Generate Booklet PDF":
     user_id = st.number_input("User ID", min_value=1, value=1, step=1)
     if st.button("Generate Booklet"):
         with st.spinner("Generating booklet PDF... This may take a moment."):
-            resp = make_request("GET", f"{BASE_URL}/users/{user_id}/booklet", headers=get_headers(), timeout=120)
+            resp = make_request("GET", f"{BASE_URL}/users/{user_id}/booklet", headers=get_headers(require_auth=True), timeout=120)
             if resp and resp.status_code == 200:
                 st.success("✅ Booklet generated successfully!")
-                st.info("The PDF has been saved to your Downloads folder.")
-                # Note: In Streamlit Cloud, you might want to return the file for download
-                # For now, we just confirm generation
+                # Handle PDF download
+                try:
+                    pdf_content = resp.content
+                    filename = f"booklet_{user_id}.pdf"
+                    st.download_button(
+                        label="📥 Download Booklet PDF",
+                        data=pdf_content,
+                        file_name=filename,
+                        mime="application/pdf"
+                    )
+                except Exception as e:
+                    st.info("The PDF has been generated. Check your backend logs for the file location.")
             elif resp:
                 show_response(resp)
 
@@ -261,12 +270,23 @@ elif action == "Generate Calendar PDF":
             resp = make_request(
                 "GET", 
                 f"{BASE_URL}/users/{user_id}/calendar?year={year}", 
-                headers=get_headers(), 
+                headers=get_headers(require_auth=True), 
                 timeout=120
             )
             if resp and resp.status_code == 200:
                 st.success("✅ Calendar generated successfully!")
-                st.info("The PDF has been saved to your Downloads folder.")
+                # Handle PDF download
+                try:
+                    pdf_content = resp.content
+                    filename = f"calendar_{user_id}_{year}.pdf"
+                    st.download_button(
+                        label="📥 Download Calendar PDF",
+                        data=pdf_content,
+                        file_name=filename,
+                        mime="application/pdf"
+                    )
+                except Exception as e:
+                    st.info("The PDF has been generated. Check your backend logs for the file location.")
             elif resp:
                 show_response(resp)
 
